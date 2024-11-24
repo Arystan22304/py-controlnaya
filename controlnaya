@@ -1,0 +1,67 @@
+import sqlite3
+import requests
+from bs4 import BeautifulSoup
+
+con = sqlite3.connect('jenis.db')
+cursor = con.cursor()
+
+cursor.execute('''CREATE TABLE IF NOT EXISTS sites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    url TEXT,
+    content TEXT
+)''')
+
+def add_site(url):
+    response = requests.get(url)
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.text, 'html.parser')
+        content = soup.get_text()
+        cursor.execute("INSERT INTO sites (url, content) VALUES (?, ?)", (url, content))
+        con.commit()
+        print("Сайт добавлен в базу данных.")
+    else:
+       print("Не удалось получить сайт")
+
+def delete_site(url):
+  # Выполняем SQL-запрос для удаления сайта с заданным URL
+  cursor.execute('''
+  DELETE FROM sites WHERE url = ?
+  ''', (url,))
+  con.commit()
+
+
+def count_word_on_site(url, word):
+  # Проверяем, существует ли сайт в базе данных
+  cursor.execute('SELECT url, content FROM sites WHERE url = ?', (url,))
+  site = cursor.fetchone()  # Извлекаем данные о сайте (URL и его содержимое)
+
+  if site:
+      content = site[1]  # Получаем содержимое сайта
+      count = content.count(word)  # Подсчитываем количество вхождений слова
+
+      if count > 0:
+          print(f"На сайте {url} слово '{word}' встречается {count} раз(а).")
+      else:
+          print(f"Слово '{word}' не найдено на сайте {url}.")
+  else:
+      print(f"Сайт с URL {url} не найден в базе данных.")
+
+while(True):
+  print('1. Add website')
+  print('2. Find Keyword')
+  print('3. Delete Website')
+  print('4. Exit Website')
+  command = int(input())
+  if command == 1:
+    url = input("Введите URL сайта: ")
+    add_site(url)  
+  elif command == 2:
+    url = input("Введите URL сайта для поиска слова: ")
+    word = str(input("Введите слово для поиска: "))
+    count_word_on_site(url, word)
+  elif command == 3:
+    url = input("Введите URL сайта для удаления: ")
+    delete_site(url) 
+  elif command == 4:
+    print("Выход из программы...")
+    break 
